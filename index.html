@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PA Deck">
+<title>PA Deck</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="icon" href="favicon.png">
+<script>
+(function(){try{
+  var pref=localStorage.getItem('padeck.theme')||'auto', eff=pref;
+  if(pref==='auto'){eff=window.matchMedia('(prefers-color-scheme: dark)').matches?'night':'day';}
+  document.documentElement.setAttribute('data-theme',eff);
+  document.documentElement.setAttribute('data-themepref',pref);
+  if(localStorage.getItem('padeck.red')==='1') document.documentElement.setAttribute('data-red','1');
+  var dim=parseFloat(localStorage.getItem('padeck.dim')||'0'); if(isNaN(dim)) dim=0;
+  document.documentElement.style.setProperty('--dim', dim);
+  var read=localStorage.getItem('padeck.read'); if(read) document.documentElement.style.setProperty('--read', read+'px');
+}catch(e){}})();
+</script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--dim:0;--read:32px}
+[data-theme="day"]{--bg:#d7dce2;--panel:#eef1f4;--panel2:#fff;--text:#0a0e14;--muted:#56606c;--line:#bcc4ce;
+  --accent:#0a5bd6;--green:#0a8f3c;--amber:#9a5d00;--red:#bf1020;--blank:#9a5d00;--pulled:#0a6fb0;--scriptbg:#fff;--scripttext:#0a0e14}
+[data-theme="night"]{--bg:#04060a;--panel:#0a0f16;--panel2:#0e141d;--text:#cdd6e0;--muted:#6b7787;--line:#1b2530;
+  --accent:#1f9cf0;--green:#19d05a;--amber:#ffb000;--red:#ff453a;--blank:#ffb000;--pulled:#22d3ee;--scriptbg:#070b11;--scripttext:#e8eef6}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.4;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#dimlay{position:fixed;inset:0;background:#000;opacity:var(--dim);pointer-events:none;z-index:9990}
+#redlay{position:fixed;inset:0;background:#ff1500;opacity:0;mix-blend-mode:multiply;pointer-events:none;z-index:9991}
+[data-red="1"] #redlay{opacity:.30}
+
+header{position:sticky;top:0;z-index:50;background:var(--panel);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;flex-direction:column;gap:8px}
+.brandrow{display:flex;align-items:center;gap:10px}
+.brand{font-weight:800;letter-spacing:.14em;font-size:15px}
+.brand .sub{color:var(--muted);font-weight:600;letter-spacing:.12em;font-size:11px}
+.statwrap{margin-left:auto;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.off{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.statlabel{font-size:11px;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.seg button{min-height:40px;padding:0 12px;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:12px;letter-spacing:.08em}
+.seg button.on{background:var(--accent);color:#fff}
+.tbtn{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--muted);font-weight:700;font-size:12px;letter-spacing:.06em}
+.tbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dimwrap{display:flex;align-items:center;gap:8px;flex:1;min-width:160px}
+.dimwrap label{font-size:11px;letter-spacing:.08em;color:var(--muted);font-weight:700}
+input[type=range]{flex:1;accent-color:var(--accent);height:40px}
+
+.wrap{display:grid;gap:14px;padding:14px;grid-template-columns:1fr;max-width:1400px;margin:0 auto}
+@media (orientation:landscape) and (min-width:880px){.wrap{grid-template-columns:minmax(320px,420px) 1fr;align-items:start}.right{position:sticky;top:120px}}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card h2{margin:0 0 10px;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:800}
+
+details.crew summary{cursor:pointer;list-style:none;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:8px}
+details.crew summary::after{content:"▾";margin-left:auto;color:var(--muted)}
+details.crew[open] summary::after{content:"▴"}
+.crewbody{margin-top:12px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.field input,.field select{min-height:50px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font-size:16px;padding:0 12px;font-weight:600;width:100%}
+.field input:focus,.field select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+.field input.pulled{color:var(--pulled);border-color:var(--pulled);box-shadow:inset 0 0 0 1px var(--pulled)}
+.full{grid-column:1/-1}
+.lbl{font-size:11px;letter-spacing:.12em;color:var(--muted);font-weight:800;margin:2px 0 6px}
+.code input{text-transform:uppercase;letter-spacing:.14em;font-weight:800;text-align:center}
+
+.pbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcat{margin-bottom:12px}
+.pcat .ctitle{font-size:11px;letter-spacing:.12em;color:var(--muted);font-weight:800;margin:0 0 6px}
+.pbtn{position:relative;min-height:54px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--text);font-weight:700;font-size:14px;text-align:left;line-height:1.2}
+.pbtn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2));box-shadow:0 0 0 1px var(--accent) inset}
+.pbtn .reqdot{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.pbtn small{display:block;color:var(--muted);font-weight:600;font-size:11px;margin-top:2px}
+
+.scriptbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.scripttitle{font-weight:800;letter-spacing:.06em;font-size:16px}
+.badge{font-size:10px;letter-spacing:.1em;font-weight:800;padding:3px 8px;border-radius:999px}
+.badge.req{background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--amber);border:1px solid var(--amber)}
+.sizer{margin-left:auto;display:inline-flex;gap:6px}
+.sizer button{min-width:46px;min-height:46px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font-size:18px;font-weight:800}
+
+#paFields{margin-bottom:14px}
+#paFields .none{color:var(--muted);font-size:13px;font-weight:600}
+.pullbtn{min-height:50px;padding:0 16px;border:1px solid var(--accent);border-radius:10px;background:var(--accent);color:#fff;font-weight:800;letter-spacing:.04em;font-size:14px}
+.pullbtn:disabled{opacity:.45;background:var(--panel2);color:var(--muted);border-color:var(--line)}
+.destnote{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px;min-height:15px}
+.destnote.ok{color:var(--green)}
+
+#scriptCard{background:var(--scriptbg);border:1px solid var(--line);border-radius:14px;padding:20px}
+#scriptText{font-size:var(--read);line-height:1.55;color:var(--scripttext)}
+#scriptText.empty{color:var(--muted);font-size:18px;line-height:1.5}
+.fill{color:var(--scripttext);font-weight:700;font-variant-numeric:tabular-nums}
+.blank{color:var(--blank);border-bottom:2px dashed var(--blank);padding:0 4px;font-weight:800;font-size:.82em;letter-spacing:.06em}
+.req-line{display:block;background:color-mix(in srgb,var(--amber) 14%,transparent);border-left:5px solid var(--amber);padding:10px 12px;margin:12px 0;border-radius:8px;font-weight:800}
+.cmd-line{display:block;background:color-mix(in srgb,var(--red) 14%,transparent);border-left:5px solid var(--red);padding:10px 12px;margin:10px 0;border-radius:8px;font-weight:800}
+.notes{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px;line-height:1.5}
+.quiet{margin-top:12px;background:color-mix(in srgb,var(--amber) 16%,transparent);border:1px solid var(--amber);color:var(--amber);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700}
+.verify{margin:0 14px 14px;color:var(--muted);font-size:11.5px;line-height:1.5;text-align:center}
+
+body[data-inflight="1"] .setup{display:none}
+body[data-inflight="1"] #scriptText{--read:max(var(--read),38px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="dimlay"></div>
+<div id="redlay"></div>
+
+<header>
+  <div class="brandrow">
+    <div class="brand">PA&nbsp;DECK <span class="sub">757 / 767</span></div>
+    <div class="statwrap"><span id="netdot" class="dot"></span><span id="netlabel" class="statlabel">ONLINE</span></div>
+  </div>
+  <div class="ctrls">
+    <div class="seg" id="themeSeg"><button data-th="day">DAY</button><button data-th="night">NIGHT</button><button data-th="auto">AUTO</button></div>
+    <button class="tbtn" id="redBtn">RED</button><button class="tbtn" id="flightBtn">IN-FLIGHT</button>
+    <div class="dimwrap"><label>DIM</label><input type="range" id="dim" min="0" max="0.85" step="0.01"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="left">
+    <section class="card setup">
+      <div class="lbl">ROUTE</div>
+      <div class="grid2">
+        <div class="field code"><label>Origin (ICAO/IATA)</label><input id="origCode" autocapitalize="characters" autocomplete="off" maxlength="4" placeholder="KATL"></div>
+        <div class="field code"><label>Destination</label><input id="destCode" autocapitalize="characters" autocomplete="off" maxlength="4" placeholder="KLGA"></div>
+      </div>
+      <div class="destnote" id="routeNote"></div>
+      <div class="grid2" style="margin-top:8px">
+        <div class="field"><label>City</label><input id="destCity" placeholder="New York"></div>
+        <div class="field"><label>Airport (full)</label><input id="destAirport" placeholder="New York's LaGuardia Airport"></div>
+      </div>
+      <div class="field full" style="margin-top:8px"><label>Conditions</label><input id="wxConditions" placeholder="partly cloudy with a light breeze"></div>
+      <div class="grid2" style="margin-top:8px">
+        <div class="field"><label>Temp °F</label><input id="tempF" inputmode="numeric" placeholder="50"></div>
+        <div class="field"><label>Temp °C</label><input id="tempC" inputmode="numeric" placeholder="10"></div>
+      </div>
+      <button class="pullbtn" id="pullBtn" style="margin-top:10px;width:100%">PULL WEATHER</button>
+
+      <details class="crew" id="crewDetails" style="margin-top:16px">
+        <summary>CREW &amp; SPEAKER</summary>
+        <div class="crewbody">
+          <div class="seg" id="spkSeg" style="width:100%;margin-bottom:12px"><button data-spk="ca" style="flex:1">CAPTAIN</button><button data-spk="fo" style="flex:1">FIRST OFFICER</button></div>
+          <div class="grid2">
+            <div class="field"><label>Captain</label><input id="captainName" placeholder="Smith"></div>
+            <div class="field"><label>First Officer</label><input id="foName" placeholder="Stewart"></div>
+            <div class="field full"><label>Flight Attendants</label><input id="faNames" placeholder="Beth, John, and Tami"></div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>SELECT A PA</h2>
+      <div id="selector"></div>
+    </section>
+  </div>
+
+  <div class="right">
+    <section class="card">
+      <div class="scriptbar">
+        <span class="scripttitle" id="scriptTitle">No PA selected</span>
+        <span id="reqBadge" class="badge req" style="display:none">REQUIRED</span>
+        <span class="sizer"><button id="szDown">A−</button><button id="szUp">A+</button></span>
+      </div>
+      <div id="paFields"></div>
+      <div id="scriptCard">
+        <div id="scriptText" class="empty">Enter your ICAO/IATA pairing up top to pull city, airport, and weather, set your crew once, then tap a PA. Only that PA's extra blanks appear here. Unfilled items show as <span class="blank">BLANK</span>.</div>
+        <div id="quietNote" class="quiet" style="display:none"></div>
+        <div id="scriptNotes" class="notes" style="display:none"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<p class="verify">Reference aid only — verify wording against the current AOM Vol.&nbsp;1 / FCOM / FOM before use. Weather is model data (Open-Meteo), not a METAR. RTO and evacuation commands must follow the Emergency Evacuation Checklist.</p>
+
+<script>
+"use strict";
+/* airport coords for the weather pull: iata, icao, full name, city, lat, lon */
+var SEED=[
+["ATL","KATL","Hartsfield–Jackson Atlanta International Airport","Atlanta",33.64,-84.43],
+["DTW","KDTW","Detroit Metropolitan Wayne County Airport","Detroit",42.21,-83.35],
+["MSP","KMSP","Minneapolis–St. Paul International Airport","Minneapolis",44.88,-93.22],
+["SLC","KSLC","Salt Lake City International Airport","Salt Lake City",40.79,-111.98],
+["JFK","KJFK","New York's John F. Kennedy International Airport","New York",40.64,-73.78],
+["LGA","KLGA","New York's LaGuardia Airport","New York",40.78,-73.87],
+["EWR","KEWR","Newark Liberty International Airport","Newark",40.69,-74.17],
+["BOS","KBOS","Boston Logan International Airport","Boston",42.36,-71.01],
+["LAX","KLAX","Los Angeles International Airport","Los Angeles",33.94,-118.41],
+["SEA","KSEA","Seattle–Tacoma International Airport","Seattle",47.45,-122.31],
+["SFO","KSFO","San Francisco International Airport","San Francisco",37.62,-122.38],
+["SAN","KSAN","San Diego International Airport","San Diego",32.73,-117.19],
+["LAS","KLAS","Harry Reid International Airport","Las Vegas",36.08,-115.15],
+["PHX","KPHX","Phoenix Sky Harbor International Airport","Phoenix",33.43,-112.01],
+["DEN","KDEN","Denver International Airport","Denver",39.86,-104.67],
+["ORD","KORD","Chicago O'Hare International Airport","Chicago",41.98,-87.90],
+["DFW","KDFW","Dallas–Fort Worth International Airport","Dallas",32.90,-97.04],
+["IAH","KIAH","Houston George Bush Intercontinental Airport","Houston",29.99,-95.34],
+["MCO","KMCO","Orlando International Airport","Orlando",28.43,-81.31],
+["MIA","KMIA","Miami International Airport","Miami",25.79,-80.29],
+["FLL","KFLL","Fort Lauderdale–Hollywood International Airport","Fort Lauderdale",26.07,-80.15],
+["TPA","KTPA","Tampa International Airport","Tampa",27.98,-82.53],
+["RSW","KRSW","Southwest Florida International Airport","Fort Myers",26.54,-81.76],
+["PBI","KPBI","Palm Beach International Airport","West Palm Beach",26.68,-80.10],
+["DCA","KDCA","Washington Reagan National Airport","Washington",38.85,-77.04],
+["IAD","KIAD","Washington Dulles International Airport","Washington",38.95,-77.46],
+["PHL","KPHL","Philadelphia International Airport","Philadelphia",39.87,-75.24],
+["BWI","KBWI","Baltimore/Washington International Airport","Baltimore",39.18,-76.67],
+["CLT","KCLT","Charlotte Douglas International Airport","Charlotte",35.21,-80.94],
+["RDU","KRDU","Raleigh–Durham International Airport","Raleigh",35.88,-78.79],
+["CVG","KCVG","Cincinnati/Northern Kentucky International Airport","Cincinnati",39.05,-84.67],
+["AUS","KAUS","Austin–Bergstrom International Airport","Austin",30.19,-97.67],
+["MSY","KMSY","Louis Armstrong New Orleans International Airport","New Orleans",29.99,-90.26],
+["PDX","KPDX","Portland International Airport","Portland",45.59,-122.60],
+["ANC","PANC","Ted Stevens Anchorage International Airport","Anchorage",61.17,-149.99],
+["HNL","PHNL","Honolulu's Daniel K. Inouye International Airport","Honolulu",21.32,-157.92],
+["OGG","PHOG","Kahului Airport","Maui",20.90,-156.43],
+["KOA","PHKO","Kona International Airport","Kailua-Kona",19.74,-156.05],
+["LIH","PHLI","Lihue Airport","Kauai",21.98,-159.34],
+["SJU","TJSJ","San Juan's Luis Muñoz Marín International Airport","San Juan",18.44,-66.00],
+["LHR","EGLL","London Heathrow Airport","London",51.47,-0.45],
+["LGW","EGKK","London Gatwick Airport","London",51.15,-0.18],
+["CDG","LFPG","Paris Charles de Gaulle Airport","Paris",49.01,2.55],
+["AMS","EHAM","Amsterdam Airport Schiphol","Amsterdam",52.31,4.76],
+["FRA","EDDF","Frankfurt Airport","Frankfurt",50.04,8.56],
+["MUC","EDDM","Munich Airport","Munich",48.35,11.79],
+["FCO","LIRF","Rome Fiumicino Airport","Rome",41.80,12.25],
+["MXP","LIMC","Milan Malpensa Airport","Milan",45.63,8.72],
+["MAD","LEMD","Madrid Barajas Airport","Madrid",40.47,-3.56],
+["BCN","LEBL","Barcelona El Prat Airport","Barcelona",41.30,2.08],
+["DUB","EIDW","Dublin Airport","Dublin",53.43,-6.27],
+["SNN","EINN","Shannon Airport","Shannon",52.70,-8.92],
+["LIS","LPPT","Lisbon Airport","Lisbon",38.77,-9.13],
+["BRU","EBBR","Brussels Airport","Brussels",50.90,4.48],
+["ZRH","LSZH","Zurich Airport","Zurich",47.46,8.55],
+["CPH","EKCH","Copenhagen Airport","Copenhagen",55.62,12.65],
+["MAN","EGCC","Manchester Airport","Manchester",53.35,-2.27],
+["EDI","EGPH","Edinburgh Airport","Edinburgh",55.95,-3.37],
+["KEF","BIKF","Keflavík International Airport","Reykjavik",63.99,-22.61],
+["ATH","LGAV","Athens International Airport","Athens",37.94,23.95],
+["NCE","LFMN","Nice Côte d'Azur Airport","Nice",43.66,7.22],
+["VCE","LIPZ","Venice Marco Polo Airport","Venice",45.51,12.35],
+["CUN","MMUN","Cancún International Airport","Cancún",21.04,-86.87],
+["SJD","MMSD","Los Cabos International Airport","San José del Cabo",23.15,-109.72],
+["PVR","MMPR","Puerto Vallarta International Airport","Puerto Vallarta",20.68,-105.25],
+["MEX","MMMX","Mexico City International Airport","Mexico City",19.44,-99.07],
+["GUA","MGGT","Guatemala City La Aurora International Airport","Guatemala City",14.58,-90.53],
+["SJO","MROC","San José Juan Santamaría International Airport","San José",9.99,-84.21],
+["LIR","MRLB","Liberia Guanacaste Airport","Liberia",10.59,-85.54],
+["PTY","MPTO","Panama City Tocumen International Airport","Panama City",9.07,-79.38],
+["PUJ","MDPC","Punta Cana International Airport","Punta Cana",18.57,-68.36],
+["SDQ","MDSD","Santo Domingo Las Américas International Airport","Santo Domingo",18.43,-69.67],
+["MBJ","MKJS","Montego Bay Sangster International Airport","Montego Bay",18.50,-77.91],
+["NAS","MYNN","Nassau Lynden Pindling International Airport","Nassau",25.04,-77.46],
+["AUA","TNCA","Aruba Queen Beatrix International Airport","Aruba",12.50,-70.01],
+["SXM","TNCM","St. Maarten Princess Juliana International Airport","St. Maarten",18.04,-63.11],
+["BGI","TBPB","Bridgetown Grantley Adams International Airport","Bridgetown",13.07,-59.49],
+["GRU","SBGR","São Paulo Guarulhos International Airport","São Paulo",-23.43,-46.47],
+["GIG","SBGL","Rio de Janeiro Galeão International Airport","Rio de Janeiro",-22.81,-43.25],
+["SCL","SCEL","Santiago Arturo Merino Benítez International Airport","Santiago",-33.39,-70.79],
+["LIM","SPJC","Lima Jorge Chávez International Airport","Lima",-12.02,-77.11],
+["BOG","SKBO","Bogotá El Dorado International Airport","Bogotá",4.70,-74.15],
+["NRT","RJAA","Tokyo Narita International Airport","Tokyo",35.77,140.39],
+["HND","RJTT","Tokyo Haneda Airport","Tokyo",35.55,139.78],
+["ICN","RKSI","Seoul Incheon International Airport","Seoul",37.46,126.44]
+];
+var byCode={};
+SEED.forEach(function(r){var a={iata:r[0],icao:r[1],name:r[2],city:r[3],lat:r[4],lon:r[5]};byCode[r[0]]=a;byCode[r[1]]=a;});
+function lookup(code){return code?byCode[String(code).toUpperCase().trim()]||null:null;}
+
+var state={fields:{speaker:"ca",onTimeStatus:"ontime",turbDescent:false},currentPA:null,pulled:{},destCoords:null,lastPulled:null};
+function load(){
+  try{var s=localStorage.getItem("padeck.fields");if(s){var o=JSON.parse(s);for(var k in o)state.fields[k]=o[k];}}catch(e){}
+  try{state.currentPA=localStorage.getItem("padeck.pa")||null;}catch(e){}
+  try{var p=localStorage.getItem("padeck.pulled");if(p)state.pulled=JSON.parse(p)||{};}catch(e){}
+  try{var c=localStorage.getItem("padeck.destCoords");if(c)state.destCoords=JSON.parse(c);}catch(e){}
+}
+function save(){try{localStorage.setItem("padeck.fields",JSON.stringify(state.fields));localStorage.setItem("padeck.pulled",JSON.stringify(state.pulled));if(state.destCoords)localStorage.setItem("padeck.destCoords",JSON.stringify(state.destCoords));else localStorage.removeItem("padeck.destCoords");}catch(e){}}
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function v(key,blank){var val=(state.fields[key]||"").trim();return val?'<span class="fill">'+esc(val)+'</span>':'<span class="blank">'+esc(blank)+'</span>';}
+function req(t){return '<span class="req-line">'+t+'</span>';}
+function cmd(t){return '<span class="cmd-line">'+t+'</span>';}
+function hr(){return new Date().getHours();}
+function greeting(){var h=hr();return h<12?"Good morning":h<17?"Good afternoon":"Good evening";}
+function tod(){var h=hr();return h<12?"this morning":h<17?"this afternoon":"this evening";}
+
+/* speaker = the crewmember reading. Titles are capitalized as courtesy titles. */
+function role(){return state.fields.speaker==="fo"?"First Officer":"Captain";}
+function name(){return state.fields.speaker==="fo"?v("foName","F/O"):v("captainName","CAPT");}
+function otherCrew(){return state.fields.speaker==="fo"?("Captain "+v("captainName","CAPT")):("First Officer "+v("foName","F/O"));}
+function fa(){return v("faNames","FA NAMES");}
+function city(){return v("destCity","CITY");}
+function airport(){return v("destAirport","AIRPORT");}
+function wx(){return v("wxConditions","WEATHER");}
+function statusSentence(){var s=state.fields.onTimeStatus;return s==="early"?"We are actually showing an early arrival today.":s==="delayed"?"We will keep you updated on our timing.":"Right now everything is on time. If anything changes, we will be sure to let you know.";}
+function landPhrase(){var s=state.fields.onTimeStatus;return s==="early"?"a few minutes early":s==="delayed"?"a little behind schedule":"right on time";}
+
+var PAS=[
+ {cat:"PRE-DEPARTURE",id:"welcome",t:"Welcome Aboard",sub:"Recommended",req:false,status:1,extras:["flightTime"],
+  build:function(){return greeting()+" from the flight deck. My name is "+name()+" and I am your "+role()+" today. On behalf of "+otherCrew()+" and your flight attendants, "+fa()+", I would like to say hello and welcome aboard Delta. Today we are flying to "+airport()+", which should take us about "+v("flightTime","FLT TIME")+". Weather in "+city()+" is "+wx()+", and a temp of "+v("tempF","°F")+"&deg;F, or "+v("tempC","°C")+"&deg;C. "+statusSentence()+" Relax, enjoy your time in the sky, and we appreciate you sharing your journey with us today.";},
+  notes:"Time/workload permitting, make this toward the end of boarding once most customers have settled in."},
+ {cat:"PRE-DEPARTURE",id:"welcomedelay",t:"Welcome — Delay",sub:"IROP",req:false,extras:["flightNumber","flightTime","timeRemaining","localTime"],
+  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots operating flight "+v("flightNumber","FLT #")+" to "+city()+" today. We sincerely appreciate your patience during our delay and apologize for any inconvenience. Getting you to your destination safely is our top priority and we appreciate you trusting us at Delta. Flight time today is "+v("flightTime","FLT TIME")+" and we are scheduled to arrive in "+v("timeRemaining","TIME LEFT")+" at "+v("localTime","LOCAL TIME")+" local, where it is "+wx()+". We hope you relax and enjoy your flight with us. On behalf of the entire crew, thank you for choosing Delta.";}},
+ {cat:"PRE-DEPARTURE",id:"delay",t:"Delay Announcement",sub:"Cabin / gatehouse",req:false,extras:["flightNumber","delayMins","delayReason","updateMins"],
+  build:function(){return "Hello everyone. My name is "+role()+" "+name()+" and I am one of your pilots for flight "+v("flightNumber","FLT #")+" to "+city()+". Unfortunately, our departure today will be delayed "+v("delayMins","#")+" minutes due to "+v("delayReason","REASON")+". We sincerely apologize and are watching the situation closely. For those with the FlyDelta app, you can also check for updates there. I will update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience but want to make sure that we get you there safely. Thank you for allowing us to serve you today.";},
+  notes:"Set an update interval and honor it on schedule, even with no new info. Apologize, take ownership, avoid editorializing."},
+ {cat:"PRE-DEPARTURE",id:"deice",t:"Deicing",sub:"",req:false,extras:["deiceMins"],
+  build:function(){return "Hello, everyone. After we pushback, we will be taxiing out to the deice pad for a normal procedure to remove the snow and ice from the aircraft before departing. If you are looking out the windows during this process, you can expect to see vehicles maneuvering closely around us and spraying the aircraft with deice and anti-ice fluid. We expect the deicing process to only take about "+v("deiceMins","15")+" minutes. We are still expecting an on-time arrival at our destination.";}},
+ {cat:"PRE-DEPARTURE",id:"beforeto",t:"Before Takeoff",sub:"Required",req:true,extras:["numberForTakeoff","minsToAirborne"],
+  build:function(){return "Hello everyone, we are number "+v("numberForTakeoff","#")+" for takeoff and will be airborne in approximately "+v("minsToAirborne","#")+" minutes. "+req("Flight attendants, please prepare the cabin for departure.");},
+  notes:"The required line may be made while taxiing; any added remarks must be made while stopped."},
+ {cat:"IN-FLIGHT",id:"seatbelt",t:"Seat Belt Release",sub:"Required (FAR)",req:true,
+  build:function(){return "Hello everyone, this is the "+role()+". We have turned off the seat belt sign, so you are free to get up if you need to. However, while you are in your seat, please keep your seat belt fastened as we do here in the flight deck, in case we encounter any un-forecasted rough air.";},
+  notes:"Required immediately after the seat belt sign is first turned off. The captain must ensure it is made."},
+ {cat:"IN-FLIGHT",id:"cruise",t:"Cruise Update",sub:"Recommended",req:false,status:1,extras:["cruiseAlt","timeRemaining"],
+  build:function(){return "Hello everyone, this is your "+role()+". We are cruising at "+v("cruiseAlt","ALT")+" and enjoying a smooth flight "+tod()+". We have about "+v("timeRemaining","TIME LEFT")+" left, which should have us landing "+landPhrase()+". We will check back in with you as we get closer to "+city()+". Thanks.";}},
+ {cat:"IN-FLIGHT",id:"relief",t:"Relief Crew",sub:"",req:false,
+  build:function(){return "Due to the long flying time today, there are extra pilots on board. During the period that one or more pilots are off duty, you may see them in the cabin due to the limited size of the flight deck. Please be assured that at all times a complete crew is on duty on the flight deck.";}},
+ {cat:"IN-FLIGHT",id:"turb",t:"Rough Air",sub:"Required when encountered",req:true,
+  build:function(){return "Ladies and gentlemen, this is the flight deck. We are passing through some rough air, so for your safety I have turned the seat belt sign back on. Please return to your seat and keep your seat belt fastened until the sign is turned off. Flight attendants, please take your seats as well. Thank you.";}},
+ {cat:"IN-FLIGHT",id:"disrupt",t:"Service Disruption",sub:"IROP",req:false,extras:["flightNumber","updateMins"],
+  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots for flight "+v("flightNumber","FLT #")+" to "+city()+" today. On behalf of the entire crew and Delta family, I want to thank you for your continued trust and for choosing Delta. We understand travel sometimes does not always go as planned, but our top priority is safety. I will continue to monitor the situation and update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience and thank you for allowing us to serve you today.";}},
+ {cat:"ARRIVAL",id:"descent",t:"Prepare Cabin / Descent",sub:"Required",req:true,turb:1,extras:["milesOut"],
+  build:function(){var s="Hello everyone, we are presently "+v("milesOut","MILES")+" miles from "+city()+". The current weather is "+wx()+", and the temperature is "+v("tempF","°F")+"&deg;F, or "+v("tempC","°C")+"&deg;C. ";if(state.fields.turbDescent)s+="Air traffic control has advised us that we can expect some rough air on the way down, so we have asked our flight attendants to wrap up their service a little early today and be seated for their safety as well as yours. ";return s+"It sure has been our pleasure serving you today, and we thank you for including us in your journey. We will see you on the ground. "+req("Flight attendants, please prepare the cabin for arrival.");},
+  notes:"Make no later than 5 minutes prior to descent. The bracketed required line is Delta policy."},
+ {cat:"ARRIVAL",id:"gateontime",t:"Gate — On Time",sub:"",req:false,
+  build:function(){return "Welcome to "+city()+" everyone. We arrived right on time and hope you have a wonderful rest of your day. Thank you for flying Delta and we hope to see you on board with us again soon.";}},
+ {cat:"ARRIVAL",id:"gateearly",t:"Gate — Early",sub:"",req:false,extras:["localTime","minsEarly"],
+  build:function(){return "Welcome to "+city()+" everyone. It is "+v("localTime","LOCAL TIME")+" local time and we have arrived "+v("minsEarly","#")+" minutes early. We hope this little bit of extra time helps you today and appreciate you flying with Delta.";}},
+ {cat:"ARRIVAL",id:"goaround",t:"Go-Around",sub:"Required after",req:true,
+  build:function(){return "Ladies and gentlemen, this is the "+role()+". You may have noticed we climbed back up a few moments ago. That is a standard maneuver we call a go-around — everything is completely normal and safe. We are simply going to come back around and set up for another approach. We will have you on the ground shortly and I will update you as we get closer. Thank you for your patience.";}},
+ {cat:"IROPS",id:"fuelstop",t:"Fuel Stop / Flag Stop",sub:"Suggested wording",req:false,extras:["fuelStopMins"],
+  build:function(){return "Hello everyone, this is "+role()+" "+name()+". Because of conditions on our route today, we are going to make a brief planned stop for fuel. While this stop is unplanned for you, it is a completely routine procedure for us. We expect to be on the ground for about "+v("fuelStopMins","#")+" minutes, and we will ask that you remain on board the aircraft while we take on fuel and get back underway. We will keep you updated and get you to "+city()+" as soon as we can. Thank you for your patience.";},
+  notes:"Reinforce that the stop is routine, give a time estimate, and include any instruction to remain on board."},
+ {cat:"IROPS",id:"part117",t:"Part 117 Cancellation",sub:"",req:false,
+  build:function(){return "Hello everyone, Federal Aviation Administration regulations govern pilot duty and flight time. Unfortunately, your pilots will exceed their maximum allowed duty limitations if we operate this flight. Therefore, we regret that we are unable to continue on this flight, and especially regret any inconvenience this may cause.";},
+  notes:"Follow with any other pertinent information for customers."},
+ {cat:"EMERGENCY",id:"rto",t:"RTO — No Evac",sub:"Captain",req:true,
+  build:function(){return req("This is the captain. We have discontinued the takeoff. Please remain seated with your seatbelts fastened.");},
+  notes:"Make as soon as practicable. Do NOT use the word \"abort.\" Time permitting, make a second PA with more detail."},
+ {cat:"EMERGENCY",id:"evac",t:"Evacuation Commands",sub:"Captain — verbatim",req:true,
+  build:function(){return "<b>Pre-evacuation, when directed by the checklist:</b>"+cmd("Easy victor, easy victor, easy victor.")+"<b>To evacuate, as directed:</b>"+cmd("This is the captain, evacuate, evacuate.")+"<b>If exits are unusable, state egress direction first:</b>"+cmd("This is the captain, right side, right side, evacuate, evacuate.");},
+  notes:"Verbatim — follow the Emergency Evacuation Checklist and Section 17.6. Cabin crew may self-initiate after 30 seconds."},
+ {cat:"SPONSORSHIP",id:"bcrf",t:"BCRF Livery",sub:"Pink scheme",req:false,extras:["flightTime"],
+  build:function(){return greeting()+", everyone. My name is "+role()+" "+name()+". On behalf of "+otherCrew()+" and your cabin crew, "+fa()+", I would like to say hello and welcome you aboard Delta. Today we are flying to "+airport()+", which should take us about "+v("flightTime","FLT TIME")+". If you did not see it from the gate, our plane is painted in a special pink color scheme to raise awareness for the Breast Cancer Research Foundation and their quest for a cure. You can use Wi-Fi on today's flight to visit delta.com and read more about our partnership with BCRF. We should be in the air shortly. Relax, enjoy your time in the sky, and thanks for making Delta a part of your journey today.";},
+  notes:"Bring the pink scheme to customers' attention, especially in October."},
+ {cat:"SPONSORSHIP",id:"hfh",t:"Habitat Livery",sub:"HFH scheme",req:false,extras:["flightTime"],
+  build:function(){return greeting()+", everyone. My name is "+role()+" "+name()+". On behalf of "+otherCrew()+" and your cabin crew, "+fa()+", welcome aboard Delta to "+airport()+", about "+v("flightTime","FLT TIME")+" today. You may notice our aircraft wears a special Habitat for Humanity color scheme — it represents the many builds Delta does to lift up our communities here at home and around the world. We are proud to fly it today. Relax, enjoy your time in the sky, and thank you for choosing Delta.";},
+  notes:"When operating the HFH aircraft, bring the livery to customers' attention."}
+];
+
+var FDEF={
+ flightNumber:["Flight #","1234","numeric"],flightTime:["Flight time","1 hour and 40 minutes",""],
+ cruiseAlt:["Cruise alt","33,000 feet",""],timeRemaining:["Time remaining","2 hours and 20 minutes",""],
+ milesOut:["Miles from dest","100","numeric"],localTime:["Local time","3:45 PM",""],minsEarly:["Minutes early","12","numeric"],
+ delayMins:["Delay (min)","30","numeric"],delayReason:["Delay reason","a late inbound aircraft",""],updateMins:["Update in (min)","20","numeric"],
+ deiceMins:["Deice (min)","15","numeric"],fuelStopMins:["Fuel stop (min)","30","numeric"],
+ numberForTakeoff:["# for takeoff","three",""],minsToAirborne:["Min to airborne","five",""]};
+
+/* ---------- selector ---------- */
+function renderSelector(){
+  var order=["PRE-DEPARTURE","IN-FLIGHT","ARRIVAL","IROPS","EMERGENCY","SPONSORSHIP"],byCat={};
+  PAS.forEach(function(p){(byCat[p.cat]=byCat[p.cat]||[]).push(p);});
+  var html="";
+  order.forEach(function(c){if(!byCat[c])return;html+='<div class="pcat"><div class="ctitle">'+c+'</div><div class="pbtns">';
+    byCat[c].forEach(function(p){html+='<button class="pbtn'+(state.currentPA===p.id?' on':'')+'" data-id="'+p.id+'">'+(p.req?'<span class="reqdot"></span>':'')+esc(p.t)+(p.sub?'<small>'+esc(p.sub)+'</small>':'')+'</button>';});
+    html+='</div></div>';});
+  document.getElementById("selector").innerHTML=html;
+  Array.prototype.forEach.call(document.querySelectorAll(".pbtn"),function(b){b.addEventListener("click",function(){selectPA(b.getAttribute("data-id"));});});
+}
+function paById(id){for(var i=0;i<PAS.length;i++)if(PAS[i].id===id)return PAS[i];return null;}
+function selectPA(id){state.currentPA=id;try{localStorage.setItem("padeck.pa",id);}catch(e){}
+  renderSelector();renderFields();renderScript();
+  if(window.matchMedia("(orientation:portrait)").matches)document.querySelector(".right").scrollIntoView({behavior:"smooth",block:"start"});}
+
+/* ---------- per-PA extras (route + weather live in setup, not here) ---------- */
+function inp(key,label,ph,im){return '<div class="field"><label>'+esc(label)+'</label><input id="'+key+'" inputmode="'+(im||"text")+'" placeholder="'+esc(ph||"")+'"></div>';}
+function renderFields(){
+  var pa=paById(state.currentPA),host=document.getElementById("paFields");
+  if(!pa){host.innerHTML="";return;}
+  var h="",any=false;
+  if(pa.status){any=true;h+='<div class="field full"><label>Arrival status</label><select id="onTimeStatus"><option value="ontime">On time</option><option value="early">Early</option><option value="delayed">Delayed</option></select></div>';}
+  if(pa.extras&&pa.extras.length){any=true;h+='<div class="grid2"'+(pa.status?' style="margin-top:10px"':'')+'>';pa.extras.forEach(function(k){var d=FDEF[k];h+=inp(k,d[0],d[1],d[2]);});h+='</div>';}
+  if(pa.turb){any=true;h+='<div class="field full" style="flex-direction:row;align-items:center;gap:10px;min-height:50px;margin-top:6px"><input type="checkbox" id="turbDescent" style="width:26px;height:26px;min-height:0;accent-color:var(--accent)"><label for="turbDescent" style="font-size:14px;color:var(--text)">Rough air expected on descent</label></div>';}
+  if(!any)h='<div class="none">No extra inputs — just read it.</div>';
+  host.innerHTML=h;
+  if(pa.extras)pa.extras.forEach(function(k){bindText(k);});
+  var sel=document.getElementById("onTimeStatus");
+  if(sel){sel.value=state.fields.onTimeStatus;sel.addEventListener("change",function(){state.fields.onTimeStatus=sel.value;save();renderScript();});}
+  var tb=document.getElementById("turbDescent");
+  if(tb){tb.checked=!!state.fields.turbDescent;tb.addEventListener("change",function(){state.fields.turbDescent=tb.checked;save();renderScript();});}
+}
+function bindText(k){var el=document.getElementById(k);if(!el)return;if(state.fields[k]!==undefined)el.value=state.fields[k];
+  el.addEventListener("input",function(){state.fields[k]=el.value;save();renderScript();});}
+
+/* ---------- script ---------- */
+function renderScript(){var pa=paById(state.currentPA);if(!pa)return;
+  document.getElementById("scriptTitle").textContent=pa.t;
+  document.getElementById("reqBadge").style.display=pa.req?"inline-block":"none";
+  var st=document.getElementById("scriptText");st.classList.remove("empty");st.innerHTML=pa.build();
+  var notes=document.getElementById("scriptNotes");if(pa.notes){notes.style.display="block";notes.innerHTML="<b>NOTE:</b> "+pa.notes;}else notes.style.display="none";
+  var q=document.getElementById("quietNote"),h=hr();
+  if((h>=22||h<8)&&!pa.req){q.style.display="block";q.textContent="QUIET HOURS (10p–8a, dep. station): limit PAs to required and safety items.";}else q.style.display="none";}
+
+/* ---------- route + single weather pull ---------- */
+function setTrip(key,val,pulled){state.fields[key]=val;var el=document.getElementById(key);if(el){el.value=val;el.classList.toggle("pulled",!!pulled);}
+  if(pulled)state.pulled[key]=true;else delete state.pulled[key];save();renderScript();}
+var convLock=false;
+function conv(from){if(convLock)return;convLock=true;var f=document.getElementById("tempF"),c=document.getElementById("tempC");
+  if(from==="F"&&f&&c){var n=parseFloat(f.value);if(!isNaN(n)){c.value=String(Math.round((n-32)*5/9));state.fields.tempC=c.value;c.classList.remove("pulled");delete state.pulled.tempC;}}
+  else if(c&&f){var m=parseFloat(c.value);if(!isNaN(m)){f.value=String(Math.round(m*9/5+32));state.fields.tempF=f.value;f.classList.remove("pulled");delete state.pulled.tempF;}}
+  save();convLock=false;}
+
+function routeNote(txt,ok){var n=document.getElementById("routeNote");n.textContent=txt||"";n.classList.toggle("ok",!!ok);}
+function resolveRoute(autopull){
+  var oc=document.getElementById("origCode").value, dc=document.getElementById("destCode").value;
+  var o=lookup(oc), d=lookup(dc);
+  if(d){
+    state.destCoords={lat:d.lat,lon:d.lon,code:d.iata||d.icao,label:d.city+" — "+d.name};
+    setTrip("destCity",d.city,true); setTrip("destAirport",d.name,true);
+    routeNote((o?(o.iata||o.icao)+" → ":"")+(d.iata||d.icao)+"  •  "+d.city+" — "+d.name,true);
+    if(autopull && navigator.onLine && state.lastPulled!==(d.iata||d.icao)) pullWx();
+  } else {
+    state.destCoords=null;
+    routeNote(dc?("\""+dc.toUpperCase()+"\" not in list — type city, airport, and weather below."):"",false);
+  }
+  save(); updatePullBtn();
+}
+function updatePullBtn(){var pb=document.getElementById("pullBtn");if(!pb)return;
+  var ok=navigator.onLine&&state.destCoords;pb.disabled=!ok;
+  pb.textContent=!navigator.onLine?"OFFLINE — WEATHER UNAVAILABLE":(state.destCoords?"PULL WEATHER":"ENTER A KNOWN DESTINATION");}
+
+var WMO={0:"clear skies",1:"mostly clear",2:"partly cloudy",3:"overcast",45:"foggy",48:"foggy",51:"light drizzle",53:"drizzle",55:"drizzle",56:"freezing drizzle",57:"freezing drizzle",61:"light rain",63:"rain",65:"heavy rain",66:"freezing rain",67:"freezing rain",71:"light snow",73:"snow",75:"heavy snow",77:"snow",80:"rain showers",81:"rain showers",82:"heavy rain showers",85:"snow showers",86:"snow showers",95:"thunderstorms",96:"thunderstorms",99:"thunderstorms"};
+function codePhrase(c){return WMO[c]||"mixed conditions";}
+function windPhrase(m){return m<4?null:m<12?"a light breeze":m<19?"a gentle breeze":m<25?"a steady breeze":m<32?"breezy conditions":"strong winds";}
+function composeWx(c,m){var s=codePhrase(c),w=windPhrase(m);return w?(s+" with "+w):(s+" and calm winds");}
+async function pullWx(){
+  if(!state.destCoords){routeNote("Enter a known destination code first.",false);return;}
+  if(!navigator.onLine){routeNote("Offline — type the weather manually.",false);return;}
+  routeNote("Pulling weather for "+state.destCoords.code+"…",false);
+  try{
+    var u="https://api.open-meteo.com/v1/forecast?latitude="+state.destCoords.lat+"&longitude="+state.destCoords.lon+"&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph";
+    var r=await fetch(u);if(!r.ok)throw 0;var d=await r.json();if(!d||!d.current)throw 0;
+    var t=d.current.temperature_2m;
+    setTrip("wxConditions",composeWx(d.current.weather_code,d.current.wind_speed_10m),true);
+    setTrip("tempF",String(Math.round(t)),true);
+    setTrip("tempC",String(Math.round((t-32)*5/9)),true);
+    state.lastPulled=state.destCoords.code;
+    routeNote("✓ "+state.destCoords.label+"  •  "+Math.round(t)+"°F, "+codePhrase(d.current.weather_code)+" (editable)",true);
+  }catch(e){routeNote("Weather pull failed — type it manually below.",false);}
+}
+
+/* ---------- crew + route hydrate ---------- */
+function hydrateSetup(){
+  ["captainName","foName","faNames"].forEach(function(k){var el=document.getElementById(k);if(state.fields[k]!==undefined)el.value=state.fields[k];
+    el.addEventListener("input",function(){state.fields[k]=el.value;save();if(state.currentPA)renderScript();});});
+  var seg=document.getElementById("spkSeg");
+  Array.prototype.forEach.call(seg.querySelectorAll("button"),function(b){if(b.getAttribute("data-spk")===state.fields.speaker)b.classList.add("on");
+    b.addEventListener("click",function(){Array.prototype.forEach.call(seg.querySelectorAll("button"),function(x){x.classList.remove("on");});b.classList.add("on");state.fields.speaker=b.getAttribute("data-spk");save();if(state.currentPA)renderScript();});});
+  var det=document.getElementById("crewDetails");if(!state.fields.captainName&&!state.fields.foName)det.open=true;
+
+  // route output fields (editable, cyan when auto/pulled)
+  ["destCity","destAirport","wxConditions","tempF","tempC"].forEach(function(k){var el=document.getElementById(k);
+    if(state.fields[k]!==undefined)el.value=state.fields[k];
+    if(state.pulled[k])el.classList.add("pulled");
+    el.addEventListener("input",function(){state.fields[k]=el.value;if(state.pulled[k]){delete state.pulled[k];el.classList.remove("pulled");}
+      if(k==="tempF")conv("F");if(k==="tempC")conv("C");save();renderScript();});});
+  // codes
+  var dc=document.getElementById("destCode"),oc=document.getElementById("origCode");
+  if(state.destCoords&&state.destCoords.code)dc.value=state.destCoords.code;
+  dc.addEventListener("input",function(){resolveRoute(false);});
+  dc.addEventListener("change",function(){resolveRoute(true);});
+  oc.addEventListener("input",function(){resolveRoute(false);});
+  document.getElementById("pullBtn").addEventListener("click",pullWx);
+  if(state.destCoords)routeNote("✓ "+state.destCoords.label+(state.pulled.wxConditions?"  •  weather set":""),true);
+  updatePullBtn();
+}
+
+/* ---------- controls ---------- */
+function applyTheme(pref){try{localStorage.setItem("padeck.theme",pref);}catch(e){}
+  var eff=pref;if(pref==="auto")eff=window.matchMedia("(prefers-color-scheme: dark)").matches?"night":"day";
+  document.documentElement.setAttribute("data-theme",eff);document.documentElement.setAttribute("data-themepref",pref);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",eff==="night"?"#04060a":"#d7dce2");
+  Array.prototype.forEach.call(document.querySelectorAll("#themeSeg button"),function(b){b.classList.toggle("on",b.getAttribute("data-th")===pref);});}
+function initControls(){
+  applyTheme(document.documentElement.getAttribute("data-themepref")||"auto");
+  Array.prototype.forEach.call(document.querySelectorAll("#themeSeg button"),function(b){b.addEventListener("click",function(){applyTheme(b.getAttribute("data-th"));});});
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(){if((document.documentElement.getAttribute("data-themepref")||"auto")==="auto")applyTheme("auto");});
+  var dim=document.getElementById("dim");dim.value=getComputedStyle(document.documentElement).getPropertyValue("--dim").trim()||"0";
+  dim.addEventListener("input",function(){document.documentElement.style.setProperty("--dim",dim.value);try{localStorage.setItem("padeck.dim",dim.value);}catch(e){}});
+  var rb=document.getElementById("redBtn"),ro=document.documentElement.getAttribute("data-red")==="1";rb.classList.toggle("on",ro);
+  rb.addEventListener("click",function(){ro=!ro;document.documentElement.setAttribute("data-red",ro?"1":"0");rb.classList.toggle("on",ro);try{localStorage.setItem("padeck.red",ro?"1":"0");}catch(e){}});
+  var fb=document.getElementById("flightBtn"),fo=localStorage.getItem("padeck.inflight")==="1";document.body.setAttribute("data-inflight",fo?"1":"0");fb.classList.toggle("on",fo);
+  fb.addEventListener("click",function(){fo=!fo;document.body.setAttribute("data-inflight",fo?"1":"0");fb.classList.toggle("on",fo);try{localStorage.setItem("padeck.inflight",fo?"1":"0");}catch(e){}});
+  var SZ=[22,26,30,34,40,46],i=2,sv=parseInt(localStorage.getItem("padeck.read")||"32",10);for(var j=0;j<SZ.length;j++)if(SZ[j]===sv){i=j;break;}
+  function ap(){document.documentElement.style.setProperty("--read",SZ[i]+"px");try{localStorage.setItem("padeck.read",String(SZ[i]));}catch(e){}}ap();
+  document.getElementById("szUp").addEventListener("click",function(){if(i<SZ.length-1)i++;ap();});
+  document.getElementById("szDown").addEventListener("click",function(){if(i>0)i--;ap();});}
+
+/* automatic, invisible screen wake lock — no button */
+var wakeS=null;
+async function acquireWake(){if(!("wakeLock" in navigator))return;try{if(wakeS)return;wakeS=await navigator.wakeLock.request("screen");wakeS.addEventListener("release",function(){wakeS=null;});}catch(e){wakeS=null;}}
+function initWake(){acquireWake();document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")acquireWake();});window.addEventListener("focus",acquireWake);}
+
+function netUpdate(){var on=navigator.onLine;document.getElementById("netdot").classList.toggle("off",!on);document.getElementById("netlabel").textContent=on?"ONLINE":"OFFLINE";updatePullBtn();}
+
+/* ---------- init ---------- */
+load();hydrateSetup();initControls();initWake();renderSelector();
+if(state.currentPA){renderFields();renderScript();}
+netUpdate();window.addEventListener("online",netUpdate);window.addEventListener("offline",netUpdate);
+if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});
+</script>
+</body>
+</html>
