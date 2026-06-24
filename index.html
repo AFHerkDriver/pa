@@ -71,6 +71,8 @@ details.crew[open] summary::after{content:"▴"}
 .field input,.field select{min-height:50px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font-size:16px;padding:0 12px;font-weight:600;width:100%}
 .field input:focus,.field select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
 .field input.pulled{color:var(--pulled);border-color:var(--pulled);box-shadow:inset 0 0 0 1px var(--pulled)}
+.field textarea{min-height:70px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font-size:14px;line-height:1.35;padding:10px 12px;font-weight:600;width:100%;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace}
+.field textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
 .full{grid-column:1/-1}
 .lbl{font-size:11px;letter-spacing:.12em;color:var(--muted);font-weight:800;margin:2px 0 6px}
 .code input{text-transform:uppercase;letter-spacing:.14em;font-weight:800;text-align:center}
@@ -96,6 +98,8 @@ details.crew[open] summary::after{content:"▴"}
 .pullbtn:disabled{opacity:.45;background:var(--panel2);color:var(--muted);border-color:var(--line)}
 .destnote{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px;min-height:15px}
 .destnote.ok{color:var(--green)}
+.raw{display:none;margin-top:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;white-space:pre-wrap;word-break:break-word}
+.raw b{color:var(--text);letter-spacing:.06em}
 
 #scriptCard{background:var(--scriptbg);border:1px solid var(--line);border-radius:14px;padding:20px}
 #scriptText{font-size:var(--read);line-height:1.55;color:var(--scripttext)}
@@ -132,12 +136,23 @@ body[data-inflight="1"] #scriptText{--read:max(var(--read),38px)}
 <div class="wrap">
   <div class="left">
     <section class="card setup">
+      <div class="lbl">PASTE RELEASE</div>
+      <div class="field full"><textarea id="releasePaste" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste your full MiCrew dispatch release here, then tap PARSE. Flight number, route, flight time, cruise altitude, crew, and destination weather all fill in automatically — no connection needed. Nothing is saved or sent; the text clears after parsing."></textarea></div>
+      <div class="grid2" style="margin:8px 0 4px">
+        <button class="pullbtn" id="parseBtn" style="margin:0">PARSE &amp; FILL</button>
+        <button class="pullbtn" id="clearPasteBtn" style="margin:0;background:transparent;color:var(--muted)">CLEAR</button>
+      </div>
+      <div class="destnote" id="parseNote"></div>
+
+      <div class="lbl" style="margin-top:16px">FLIGHT</div>
+      <div class="field full" style="margin-bottom:12px"><label>Flight number (e.g. DAL2243)</label><input id="flightNumber" autocapitalize="characters" autocomplete="off" placeholder="DAL2243"></div>
       <div class="lbl">ROUTE</div>
       <div class="grid2">
         <div class="field code"><label>Origin (ICAO/IATA)</label><input id="origCode" autocapitalize="characters" autocomplete="off" maxlength="4" placeholder="KATL"></div>
         <div class="field code"><label>Destination</label><input id="destCode" autocapitalize="characters" autocomplete="off" maxlength="4" placeholder="KLGA"></div>
       </div>
       <div class="destnote" id="routeNote"></div>
+      <div class="raw" id="rawWx"></div>
       <div class="grid2" style="margin-top:8px">
         <div class="field"><label>City</label><input id="destCity" placeholder="New York"></div>
         <div class="field"><label>Airport (full)</label><input id="destAirport" placeholder="New York's LaGuardia Airport"></div>
@@ -147,7 +162,7 @@ body[data-inflight="1"] #scriptText{--read:max(var(--read),38px)}
         <div class="field"><label>Temp °F</label><input id="tempF" inputmode="numeric" placeholder="50"></div>
         <div class="field"><label>Temp °C</label><input id="tempC" inputmode="numeric" placeholder="10"></div>
       </div>
-      <button class="pullbtn" id="pullBtn" style="margin-top:10px;width:100%">PULL WEATHER</button>
+      <button class="pullbtn" id="pullBtn" style="margin-top:10px;width:100%">PULL METAR/TAF</button>
 
       <details class="crew" id="crewDetails" style="margin-top:16px">
         <summary>CREW &amp; SPEAKER</summary>
@@ -185,7 +200,7 @@ body[data-inflight="1"] #scriptText{--read:max(var(--read),38px)}
   </div>
 </div>
 
-<p class="verify">Reference aid only — verify wording against the current AOM Vol.&nbsp;1 / FCOM / FOM before use. Weather is model data (Open-Meteo), not a METAR. RTO and evacuation commands must follow the Emergency Evacuation Checklist.</p>
+<p class="verify">Reference aid only — verify wording against the current AOM Vol.&nbsp;1 / FCOM / FOM before use. When you paste a dispatch release it is parsed entirely on this device (offline) and is never saved or transmitted; the text clears after parsing. Destination weather comes from the release itself when pasted, otherwise from the NOAA/NWS Aviation Weather Center (METAR/TAF) during your preflight connection — always confirm against your official source. RTO and evacuation commands must follow the Emergency Evacuation Checklist.</p>
 
 <script>
 "use strict";
@@ -303,26 +318,26 @@ function role(){return state.fields.speaker==="fo"?"First Officer":"Captain";}
 function name(){return state.fields.speaker==="fo"?v("foName","F/O"):v("captainName","CAPT");}
 function otherCrew(){return state.fields.speaker==="fo"?("Captain "+v("captainName","CAPT")):("First Officer "+v("foName","F/O"));}
 function fa(){return v("faNames","FA NAMES");}
+function flightNum(){var s=(state.fields.flightNumber||"").trim();if(!s)return null;var m=s.match(/(\d{1,5})\s*$/);return m?m[1]:s;}
+function fnum(){var n=flightNum();return n?('<span class="fill">'+esc(n)+'</span>'):'<span class="blank">FLT #</span>';}
 function city(){return v("destCity","CITY");}
 function airport(){return v("destAirport","AIRPORT");}
+function depCity(){var el=document.getElementById("origCode");var raw=el?String(el.value||"").trim():"";var o=lookup(raw);if(o)return '<span class="fill">'+esc(o.city)+'</span>';if(raw)return '<span class="fill">'+esc(raw.toUpperCase())+'</span>';return '<span class="blank">FROM</span>';}
 function wx(){return v("wxConditions","WEATHER");}
 function statusSentence(){var s=state.fields.onTimeStatus;return s==="early"?"We are actually showing an early arrival today.":s==="delayed"?"We will keep you updated on our timing.":"Right now everything is on time. If anything changes, we will be sure to let you know.";}
 function landPhrase(){var s=state.fields.onTimeStatus;return s==="early"?"a few minutes early":s==="delayed"?"a little behind schedule":"right on time";}
 
 var PAS=[
  {cat:"PRE-DEPARTURE",id:"welcome",t:"Welcome Aboard",sub:"Recommended",req:false,status:1,extras:["flightTime"],
-  build:function(){return greeting()+" from the flight deck. My name is "+name()+" and I am your "+role()+" today. On behalf of "+otherCrew()+" and your flight attendants, "+fa()+", I would like to say hello and welcome aboard Delta. Today we are flying to "+airport()+", which should take us about "+v("flightTime","FLT TIME")+". Weather in "+city()+" is "+wx()+", and a temp of "+v("tempF","°F")+"&deg;F, or "+v("tempC","°C")+"&deg;C. "+statusSentence()+" Relax, enjoy your time in the sky, and we appreciate you sharing your journey with us today.";},
+  build:function(){return greeting()+" from the flight deck. My name is "+name()+" and I am your "+role()+" today. On behalf of "+otherCrew()+" and your flight attendants, "+fa()+", I would like to say hello and welcome aboard Delta flight "+fnum()+". Today we are flying to "+airport()+", which should take us about "+v("flightTime","FLT TIME")+". Weather in "+city()+" is "+wx()+", and a temp of "+v("tempF","°F")+"&deg;F, or "+v("tempC","°C")+"&deg;C. "+statusSentence()+" Relax, enjoy your time in the sky, and we appreciate you sharing your journey with us today.";},
   notes:"Time/workload permitting, make this toward the end of boarding once most customers have settled in."},
- {cat:"PRE-DEPARTURE",id:"welcomedelay",t:"Welcome — Delay",sub:"IROP",req:false,extras:["flightNumber","flightTime","timeRemaining","localTime"],
-  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots operating flight "+v("flightNumber","FLT #")+" to "+city()+" today. We sincerely appreciate your patience during our delay and apologize for any inconvenience. Getting you to your destination safely is our top priority and we appreciate you trusting us at Delta. Flight time today is "+v("flightTime","FLT TIME")+" and we are scheduled to arrive in "+v("timeRemaining","TIME LEFT")+" at "+v("localTime","LOCAL TIME")+" local, where it is "+wx()+". We hope you relax and enjoy your flight with us. On behalf of the entire crew, thank you for choosing Delta.";}},
- {cat:"PRE-DEPARTURE",id:"delay",t:"Delay Announcement",sub:"Cabin / gatehouse",req:false,extras:["flightNumber","delayMins","delayReason","updateMins"],
-  build:function(){return "Hello everyone. My name is "+role()+" "+name()+" and I am one of your pilots for flight "+v("flightNumber","FLT #")+" to "+city()+". Unfortunately, our departure today will be delayed "+v("delayMins","#")+" minutes due to "+v("delayReason","REASON")+". We sincerely apologize and are watching the situation closely. For those with the FlyDelta app, you can also check for updates there. I will update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience but want to make sure that we get you there safely. Thank you for allowing us to serve you today.";},
+ {cat:"PRE-DEPARTURE",id:"welcomedelay",t:"Welcome — Delay",sub:"IROP",req:false,extras:["flightTime","timeRemaining","localTime"],
+  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots operating flight "+fnum()+" to "+city()+" today. We sincerely appreciate your patience during our delay and apologize for any inconvenience. Getting you to your destination safely is our top priority and we appreciate you trusting us at Delta. Flight time today is "+v("flightTime","FLT TIME")+" and we are scheduled to arrive in "+v("timeRemaining","TIME LEFT")+" at "+v("localTime","LOCAL TIME")+" local, where it is "+wx()+". We hope you relax and enjoy your flight with us. On behalf of the entire crew, thank you for choosing Delta.";}},
+ {cat:"PRE-DEPARTURE",id:"delay",t:"Delay Announcement",sub:"Cabin / gatehouse",req:false,extras:["delayMins","delayReason","updateMins"],
+  build:function(){return "Hello everyone. My name is "+role()+" "+name()+" and I am one of your pilots for flight "+fnum()+" to "+city()+". Unfortunately, our departure today will be delayed "+v("delayMins","#")+" minutes due to "+v("delayReason","REASON")+". We sincerely apologize and are watching the situation closely. For those with the FlyDelta app, you can also check for updates there. I will update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience but want to make sure that we get you there safely. Thank you for allowing us to serve you today.";},
   notes:"Set an update interval and honor it on schedule, even with no new info. Apologize, take ownership, avoid editorializing."},
  {cat:"PRE-DEPARTURE",id:"deice",t:"Deicing",sub:"",req:false,extras:["deiceMins"],
   build:function(){return "Hello, everyone. After we pushback, we will be taxiing out to the deice pad for a normal procedure to remove the snow and ice from the aircraft before departing. If you are looking out the windows during this process, you can expect to see vehicles maneuvering closely around us and spraying the aircraft with deice and anti-ice fluid. We expect the deicing process to only take about "+v("deiceMins","15")+" minutes. We are still expecting an on-time arrival at our destination.";}},
- {cat:"PRE-DEPARTURE",id:"beforeto",t:"Before Takeoff",sub:"Required",req:true,extras:["numberForTakeoff","minsToAirborne"],
-  build:function(){return "Hello everyone, we are number "+v("numberForTakeoff","#")+" for takeoff and will be airborne in approximately "+v("minsToAirborne","#")+" minutes. "+req("Flight attendants, please prepare the cabin for departure.");},
-  notes:"The required line may be made while taxiing; any added remarks must be made while stopped."},
  {cat:"IN-FLIGHT",id:"seatbelt",t:"Seat Belt Release",sub:"Required (FAR)",req:true,
   build:function(){return "Hello everyone, this is the "+role()+". We have turned off the seat belt sign, so you are free to get up if you need to. However, while you are in your seat, please keep your seat belt fastened as we do here in the flight deck, in case we encounter any un-forecasted rough air.";},
   notes:"Required immediately after the seat belt sign is first turned off. The captain must ensure it is made."},
@@ -332,11 +347,17 @@ var PAS=[
   build:function(){return "Due to the long flying time today, there are extra pilots on board. During the period that one or more pilots are off duty, you may see them in the cabin due to the limited size of the flight deck. Please be assured that at all times a complete crew is on duty on the flight deck.";}},
  {cat:"IN-FLIGHT",id:"turb",t:"Rough Air",sub:"Required when encountered",req:true,
   build:function(){return "Ladies and gentlemen, this is the flight deck. We are passing through some rough air, so for your safety I have turned the seat belt sign back on. Please return to your seat and keep your seat belt fastened until the sign is turned off. Flight attendants, please take your seats as well. Thank you.";}},
- {cat:"IN-FLIGHT",id:"disrupt",t:"Service Disruption",sub:"IROP",req:false,extras:["flightNumber","updateMins"],
-  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots for flight "+v("flightNumber","FLT #")+" to "+city()+" today. On behalf of the entire crew and Delta family, I want to thank you for your continued trust and for choosing Delta. We understand travel sometimes does not always go as planned, but our top priority is safety. I will continue to monitor the situation and update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience and thank you for allowing us to serve you today.";}},
- {cat:"ARRIVAL",id:"descent",t:"Prepare Cabin / Descent",sub:"Required",req:true,turb:1,extras:["milesOut"],
-  build:function(){var s="Hello everyone, we are presently "+v("milesOut","MILES")+" miles from "+city()+". The current weather is "+wx()+", and the temperature is "+v("tempF","°F")+"&deg;F, or "+v("tempC","°C")+"&deg;C. ";if(state.fields.turbDescent)s+="Air traffic control has advised us that we can expect some rough air on the way down, so we have asked our flight attendants to wrap up their service a little early today and be seated for their safety as well as yours. ";return s+"It sure has been our pleasure serving you today, and we thank you for including us in your journey. We will see you on the ground. "+req("Flight attendants, please prepare the cabin for arrival.");},
-  notes:"Make no later than 5 minutes prior to descent. The bracketed required line is Delta policy."},
+ {cat:"IN-FLIGHT",id:"disrupt",t:"Service Disruption",sub:"IROP",req:false,extras:["updateMins"],
+  build:function(){return "Hello everyone. This is "+role()+" "+name()+", one of your pilots for flight "+fnum()+" to "+city()+" today. On behalf of the entire crew and Delta family, I want to thank you for your continued trust and for choosing Delta. We understand travel sometimes does not always go as planned, but our top priority is safety. I will continue to monitor the situation and update you again in "+v("updateMins","#")+" minutes, or before then if anything changes. Again, we apologize for any inconvenience and thank you for allowing us to serve you today.";}},
+ {cat:"ARRIVAL",id:"descent",t:"Prepare Cabin / Descent",sub:"Required",req:true,turb:1,extras:["timeRemaining","gate"],
+  build:function(){
+    var belt=state.fields.speaker==="fo"?"At this time the Captain has asked me to turn on the seat belt sign":"At this time I have turned on the seat belt sign";
+    var s="Folks, from the flight deck \u2014 we are about to begin our initial descent into "+airport()+", and we should have you on the ground in about "+v("timeRemaining","TIME OUT")+". Weather today in "+city()+" is "+wx()+", with temps around "+v("tempF","\u00b0F")+"&deg;F, or "+v("tempC","\u00b0C")+"&deg;C. Our planned arrival gate is "+v("gate","GATE")+". ";
+    s+=belt+", and it will remain on for the remainder of the flight. We ask that if you are up and about, you return to your seats and fasten your seat belt. ";
+    if(state.fields.turbDescent)s+="We are also expecting some rough air on the way down, so we ask everyone to remain seated with your seat belts fastened. ";
+    s+="We sure do appreciate you flying with us from "+depCity()+" to "+city()+", and we look forward to welcoming you aboard another Delta flight in the near future. ";
+    return s+req("Flight attendants, please prepare the cabin for arrival.");},
+  notes:"Make no later than 5 minutes prior to descent. The bracketed line (flight-attendant cabin-prep command) is the Delta-required item."},
  {cat:"ARRIVAL",id:"gateontime",t:"Gate — On Time",sub:"",req:false,
   build:function(){return "Welcome to "+city()+" everyone. We arrived right on time and hope you have a wonderful rest of your day. Thank you for flying Delta and we hope to see you on board with us again soon.";}},
  {cat:"ARRIVAL",id:"gateearly",t:"Gate — Early",sub:"",req:false,extras:["localTime","minsEarly"],
@@ -348,25 +369,14 @@ var PAS=[
   notes:"Reinforce that the stop is routine, give a time estimate, and include any instruction to remain on board."},
  {cat:"IROPS",id:"part117",t:"Part 117 Cancellation",sub:"",req:false,
   build:function(){return "Hello everyone, Federal Aviation Administration regulations govern pilot duty and flight time. Unfortunately, your pilots will exceed their maximum allowed duty limitations if we operate this flight. Therefore, we regret that we are unable to continue on this flight, and especially regret any inconvenience this may cause.";},
-  notes:"Follow with any other pertinent information for customers."},
- {cat:"EMERGENCY",id:"rto",t:"RTO — No Evac",sub:"Captain",req:true,
-  build:function(){return req("This is the captain. We have discontinued the takeoff. Please remain seated with your seatbelts fastened.");},
-  notes:"Make as soon as practicable. Do NOT use the word \"abort.\" Time permitting, make a second PA with more detail."},
- {cat:"EMERGENCY",id:"evac",t:"Evacuation Commands",sub:"Captain — verbatim",req:true,
-  build:function(){return "<b>Pre-evacuation, when directed by the checklist:</b>"+cmd("Easy victor, easy victor, easy victor.")+"<b>To evacuate, as directed:</b>"+cmd("This is the captain, evacuate, evacuate.")+"<b>If exits are unusable, state egress direction first:</b>"+cmd("This is the captain, right side, right side, evacuate, evacuate.");},
-  notes:"Verbatim — follow the Emergency Evacuation Checklist and Section 17.6. Cabin crew may self-initiate after 30 seconds."},
- {cat:"SPONSORSHIP",id:"bcrf",t:"BCRF Livery",sub:"Pink scheme",req:false,extras:["flightTime"],
-  build:function(){return greeting()+", everyone. My name is "+role()+" "+name()+". On behalf of "+otherCrew()+" and your cabin crew, "+fa()+", I would like to say hello and welcome you aboard Delta. Today we are flying to "+airport()+", which should take us about "+v("flightTime","FLT TIME")+". If you did not see it from the gate, our plane is painted in a special pink color scheme to raise awareness for the Breast Cancer Research Foundation and their quest for a cure. You can use Wi-Fi on today's flight to visit delta.com and read more about our partnership with BCRF. We should be in the air shortly. Relax, enjoy your time in the sky, and thanks for making Delta a part of your journey today.";},
-  notes:"Bring the pink scheme to customers' attention, especially in October."},
- {cat:"SPONSORSHIP",id:"hfh",t:"Habitat Livery",sub:"HFH scheme",req:false,extras:["flightTime"],
-  build:function(){return greeting()+", everyone. My name is "+role()+" "+name()+". On behalf of "+otherCrew()+" and your cabin crew, "+fa()+", welcome aboard Delta to "+airport()+", about "+v("flightTime","FLT TIME")+" today. You may notice our aircraft wears a special Habitat for Humanity color scheme — it represents the many builds Delta does to lift up our communities here at home and around the world. We are proud to fly it today. Relax, enjoy your time in the sky, and thank you for choosing Delta.";},
-  notes:"When operating the HFH aircraft, bring the livery to customers' attention."}
+  notes:"Follow with any other pertinent information for customers."}
 ];
 
 var FDEF={
  flightNumber:["Flight #","1234","numeric"],flightTime:["Flight time","1 hour and 40 minutes",""],
  cruiseAlt:["Cruise alt","33,000 feet",""],timeRemaining:["Time remaining","2 hours and 20 minutes",""],
  milesOut:["Miles from dest","100","numeric"],localTime:["Local time","3:45 PM",""],minsEarly:["Minutes early","12","numeric"],
+ gate:["Arrival gate","B12",""],
  delayMins:["Delay (min)","30","numeric"],delayReason:["Delay reason","a late inbound aircraft",""],updateMins:["Update in (min)","20","numeric"],
  deiceMins:["Deice (min)","15","numeric"],fuelStopMins:["Fuel stop (min)","30","numeric"],
  numberForTakeoff:["# for takeoff","three",""],minsToAirborne:["Min to airborne","five",""]};
@@ -405,7 +415,8 @@ function renderFields(){
   if(tb){tb.checked=!!state.fields.turbDescent;tb.addEventListener("change",function(){state.fields.turbDescent=tb.checked;save();renderScript();});}
 }
 function bindText(k){var el=document.getElementById(k);if(!el)return;if(state.fields[k]!==undefined)el.value=state.fields[k];
-  el.addEventListener("input",function(){state.fields[k]=el.value;save();renderScript();});}
+  if(state.pulled[k])el.classList.add("pulled");
+  el.addEventListener("input",function(){state.fields[k]=el.value;if(state.pulled[k]){delete state.pulled[k];el.classList.remove("pulled");}save();renderScript();});}
 
 /* ---------- script ---------- */
 function renderScript(){var pa=paById(state.currentPA);if(!pa)return;
@@ -430,43 +441,146 @@ function resolveRoute(autopull){
   var oc=document.getElementById("origCode").value, dc=document.getElementById("destCode").value;
   var o=lookup(oc), d=lookup(dc);
   if(d){
-    state.destCoords={lat:d.lat,lon:d.lon,code:d.iata||d.icao,label:d.city+" — "+d.name};
+    state.destCoords={lat:d.lat,lon:d.lon,code:d.iata||d.icao,icao:d.icao,label:d.city+" — "+d.name};
     setTrip("destCity",d.city,true); setTrip("destAirport",d.name,true);
     routeNote((o?(o.iata||o.icao)+" → ":"")+(d.iata||d.icao)+"  •  "+d.city+" — "+d.name,true);
-    if(autopull && navigator.onLine && state.lastPulled!==(d.iata||d.icao)) pullWx();
+    if(autopull && navigator.onLine && state.lastPulled!==d.icao) pullWx();
   } else {
-    state.destCoords=null;
+    state.destCoords=null; showRaw("","");
     routeNote(dc?("\""+dc.toUpperCase()+"\" not in list — type city, airport, and weather below."):"",false);
   }
   save(); updatePullBtn();
 }
 function updatePullBtn(){var pb=document.getElementById("pullBtn");if(!pb)return;
   var ok=navigator.onLine&&state.destCoords;pb.disabled=!ok;
-  pb.textContent=!navigator.onLine?"OFFLINE — WEATHER UNAVAILABLE":(state.destCoords?"PULL WEATHER":"ENTER A KNOWN DESTINATION");}
+  pb.textContent=!navigator.onLine?"OFFLINE — WEATHER UNAVAILABLE":(state.destCoords?"PULL METAR/TAF":"ENTER A KNOWN DESTINATION");}
 
-var WMO={0:"clear skies",1:"mostly clear",2:"partly cloudy",3:"overcast",45:"foggy",48:"foggy",51:"light drizzle",53:"drizzle",55:"drizzle",56:"freezing drizzle",57:"freezing drizzle",61:"light rain",63:"rain",65:"heavy rain",66:"freezing rain",67:"freezing rain",71:"light snow",73:"snow",75:"heavy snow",77:"snow",80:"rain showers",81:"rain showers",82:"heavy rain showers",85:"snow showers",86:"snow showers",95:"thunderstorms",96:"thunderstorms",99:"thunderstorms"};
-function codePhrase(c){return WMO[c]||"mixed conditions";}
-function windPhrase(m){return m<4?null:m<12?"a light breeze":m<19?"a gentle breeze":m<25?"a steady breeze":m<32?"breezy conditions":"strong winds";}
-function composeWx(c,m){var s=codePhrase(c),w=windPhrase(m);return w?(s+" with "+w):(s+" and calm winds");}
+/* ---- METAR/TAF from NOAA Aviation Weather Center (routed via CORS proxy) ---- */
+function skyPhrase(clouds){
+  if(!clouds||!clouds.length) return "clear skies";
+  var c=clouds.map(function(x){return (x.cover||"").toUpperCase();});
+  if(c.indexOf("OVC")>=0) return "overcast";
+  if(c.indexOf("BKN")>=0) return "mostly cloudy";
+  if(c.indexOf("SCT")>=0) return "partly cloudy";
+  if(c.indexOf("FEW")>=0) return "mostly clear";
+  return "clear skies";
+}
+function wxPhrase(s){
+  if(!s) return null; s=s.toUpperCase();
+  var heavy=s.indexOf("+")>=0, light=s.indexOf("-")>=0;
+  function lv(b){return heavy?("heavy "+b):light?("light "+b):b;}
+  if(s.indexOf("TS")>=0) return "thunderstorms";
+  if(s.indexOf("FZRA")>=0) return "freezing rain";
+  if(s.indexOf("FZDZ")>=0) return "freezing drizzle";
+  if(s.indexOf("SN")>=0) return lv("snow");
+  if(s.indexOf("SHRA")>=0) return "rain showers";
+  if(s.indexOf("RA")>=0) return lv("rain");
+  if(s.indexOf("DZ")>=0) return "drizzle";
+  if(s.indexOf("FG")>=0) return "fog";
+  if(s.indexOf("BR")>=0) return "mist";
+  if(s.indexOf("HZ")>=0) return "haze";
+  return null;
+}
+function windPhrase(kt){
+  if(kt==null||isNaN(kt)||kt<3) return null;
+  if(kt<10) return "a light breeze"; if(kt<16) return "a gentle breeze";
+  if(kt<22) return "a steady breeze"; if(kt<28) return "breezy conditions"; return "strong winds";
+}
+function composeMetar(o){var p=wxPhrase(o.wxString)||skyPhrase(o.clouds),w=windPhrase(o.wspd);return w?(p+" with "+w):(p+" and calm winds");}
+function cToF(c){return c==null?null:Math.round(c*9/5+32);}
+function proxify(url){return [
+  "https://corsproxy.io/?url="+encodeURIComponent(url),
+  "https://api.allorigins.win/raw?url="+encodeURIComponent(url),
+  "https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(url)];}
+function showRaw(metar,taf){var el=document.getElementById("rawWx");if(!el)return;
+  if(!metar&&!taf){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="block";
+  el.innerHTML="<div><b>METAR</b>  "+esc(metar||"n/a")+"</div>"+(taf?"<div style='margin-top:6px'><b>TAF</b>  "+esc(taf)+"</div>":"");}
 async function pullWx(){
-  if(!state.destCoords){routeNote("Enter a known destination code first.",false);return;}
+  if(!state.destCoords||!state.destCoords.icao){routeNote("Enter a known ICAO/IATA destination first.",false);return;}
   if(!navigator.onLine){routeNote("Offline — type the weather manually.",false);return;}
-  routeNote("Pulling weather for "+state.destCoords.code+"…",false);
+  var icao=state.destCoords.icao;
+  routeNote("Pulling METAR/TAF for "+icao+"…",false);
+  var awc="https://aviationweather.gov/api/data/metar?ids="+icao+"&format=json&taf=true";
+  var proxies=proxify(awc),data=null,reason="no response";
+  for(var i=0;i<proxies.length;i++){
+    try{
+      var r=await fetch(proxies[i]);
+      if(!r.ok){reason="HTTP "+r.status;continue;}
+      var j=await r.json();
+      if(Array.isArray(j)&&j.length){data=j[0];break;}
+      reason="no current report for "+icao;
+    }catch(e){reason="connection blocked";}
+  }
+  if(!data){routeNote("Couldn't pull weather ("+reason+") — type it manually below.",false);showRaw("","");return;}
+  if(data.temp!=null){setTrip("tempC",String(Math.round(data.temp)),true);setTrip("tempF",String(cToF(data.temp)),true);}
+  setTrip("wxConditions",composeMetar(data),true);
+  state.lastPulled=icao;
+  showRaw(data.rawOb||"",data.rawTaf||"");
+  routeNote("✓ "+(state.destCoords.label||icao)+"  •  "+(data.temp!=null?Math.round(data.temp)+"°C, ":"")+composeMetar(data)+" (editable)",true);
+}
+
+/* ---------- paste-and-go: parse a MiCrew dispatch release (fully local/offline) ---------- */
+function rTitle(s){return s.replace(/\b([A-Z])([A-Z'’.\-]*)/g,function(_,a,b){return a+b.toLowerCase();});}
+function rEte(h,m){h=+h;m=+m;var p=[];if(h>0)p.push(h+" hour"+(h===1?"":"s"));if(m>0)p.push((p.length?"and ":"")+m+" minute"+(m===1?"":"s"));return p.join(" ");}
+function rJoin(a){if(a.length===1)return a[0];if(a.length===2)return a[0]+" and "+a[1];return a.slice(0,-1).join(", ")+", and "+a[a.length-1];}
+function rSection(t,header,stops){var i=t.indexOf(header);if(i<0)return"";var rest=t.slice(i+header.length),end=rest.length;stops.forEach(function(h){var j=rest.indexOf(h);if(j>=0&&j<end)end=j;});return rest.slice(0,end);}
+function rMetarBody(b){var o={clouds:[]};
+  var w=b.match(/\b(?:\d{3}|VRB)(\d{2,3})(?:G\d{2,3})?KT\b/);if(w)o.wspd=+w[1];
+  var tt=b.match(/\s(M?\d{2})\/(M?\d{2})\b/);if(tt)o.temp=(tt[1].charAt(0)==="M"?-(+tt[1].slice(1)):+tt[1]);
+  var cre=/\b(FEW|SCT|BKN|OVC)\d{3}\b/g,cm;while((cm=cre.exec(b)))o.clouds.push({cover:cm[1]});
+  var wx=b.match(/(?:^|\s)((?:[-+]|VC)?(?:TS|SH|FZ)?(?:RA|SN|DZ|PL|GR|GS|BR|FG|FU|HZ|SQ))\b/);o.wxString=wx?wx[1]:null;
+  return o;}
+function parseRelease(t){t=(t||"").replace(/\r/g,"");var o={};
   try{
-    var u="https://api.open-meteo.com/v1/forecast?latitude="+state.destCoords.lat+"&longitude="+state.destCoords.lon+"&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph";
-    var r=await fetch(u);if(!r.ok)throw 0;var d=await r.json();if(!d||!d.current)throw 0;
-    var t=d.current.temperature_2m;
-    setTrip("wxConditions",composeWx(d.current.weather_code,d.current.wind_speed_10m),true);
-    setTrip("tempF",String(Math.round(t)),true);
-    setTrip("tempC",String(Math.round((t-32)*5/9)),true);
-    state.lastPulled=state.destCoords.code;
-    routeNote("✓ "+state.destCoords.label+"  •  "+Math.round(t)+"°F, "+codePhrase(d.current.weather_code)+" (editable)",true);
-  }catch(e){routeNote("Weather pull failed — type it manually below.",false);}
+  var m=t.match(/\bDAL\s+0*(\d{2,5})\//)||t.match(/\bFLT\s+0*(\d{2,5})\//);if(m)o.flightNumber="DAL"+m[1];
+  var r=t.match(/\b([A-Z]{3})\/([A-Z]{4})\/[^\/]*?-\s*([A-Z]{3})\/([A-Z]{4})\//);if(r){o.origIata=r[1];o.origIcao=r[2];o.destIata=r[3];o.destIcao=r[4];}
+  var e=t.match(/\bETE-?\s*(\d{1,2}):(\d{2})\b/);if(e)o.flightTime=rEte(e[1],e[2]);
+  var f=t.match(/\bFL\s+(\d{3})\b/);if(f)o.cruiseAlt=(+f[1]*100).toLocaleString("en-US")+" feet";
+  var pa=t.match(/PLT\s+A\s+\d+\s+([A-Z][A-Z'’.\- ]*?),/);if(pa)o.captainName=rTitle(pa[1].trim());
+  var pb=t.match(/PLT\s+B\s+\d+\s+([A-Z][A-Z'’.\- ]*?),/);if(pb)o.foName=rTitle(pb[1].trim());
+  var fas=[],fre=/F\/A\s+[A-Z]\s+\d+\s+([A-Z]+)\s+[A-Z]/g,fm;while((fm=fre.exec(t)))fas.push(rTitle(fm[1]));
+  if(fas.length)o.faNames=rJoin(fas);
+  if(o.destIata){
+    var sec=rSection(t,"DESTINATION WEATHER",["DESTINATION FORECAST","WEATHER AROUND","ALTERNATE","ORIGIN WEATHER"]);
+    var j=sec.replace(/\n/g," ").replace(/\s+/g," ");
+    var re=new RegExp(o.destIata+"\\s+\\d{6}\\s+METAR\\s+(\\d{6}Z\\s+.*?)\\s+RMK","g"),mm,last=null;
+    while((mm=re.exec(j)))last=mm[1];
+    if(last){o.destMetarRaw=o.destIata+" "+last.trim();var pm=rMetarBody(" "+last);o.wxConditions=composeMetar(pm);if(pm.temp!=null){o.tempC=String(pm.temp);o.tempF=String(cToF(pm.temp));}}
+    var taf=rSection(t,"DESTINATION FORECAST",["WEATHER AROUND","ALTERNATE","ORIGIN WEATHER","ENROUTE"]);
+    var tm=taf.match(new RegExp(o.destIata+"\\s+DL\\s+\\d{6}\\s+VALID[\\s\\S]*?(?=RMK DL|DISCUSSION|\\n\\s*\\n|$)"));
+    if(tm)o.destTafRaw=tm[0].replace(/[ \t]+\n/g,"\n").replace(/[ \t]+$/,"").trim();
+  }
+  }catch(err){}
+  return o;}
+function pNote(t,ok){var n=document.getElementById("parseNote");if(!n)return;n.textContent=t||"";n.classList.toggle("ok",!!ok);}
+function applyRelease(){
+  var ta=document.getElementById("releasePaste"),txt=ta?ta.value:"";
+  if(!txt||txt.trim().length<20){pNote("Paste your release text above first.",false);return;}
+  var o=parseRelease(txt);
+  if(!o.flightNumber&&!o.destIcao){pNote("Couldn't read that as a release — make sure it's the full MiCrew text.",false);return;}
+  if(o.flightNumber)setTrip("flightNumber",o.flightNumber,true);
+  if(o.origIcao)document.getElementById("origCode").value=o.origIcao;
+  if(o.destIcao){document.getElementById("destCode").value=o.destIcao;resolveRoute(false);}
+  if(o.flightTime)setTrip("flightTime",o.flightTime,true);
+  if(o.cruiseAlt)setTrip("cruiseAlt",o.cruiseAlt,true);
+  if(o.captainName)setTrip("captainName",o.captainName,true);
+  if(o.foName)setTrip("foName",o.foName,true);
+  if(o.faNames)setTrip("faNames",o.faNames,true);
+  if(o.wxConditions)setTrip("wxConditions",o.wxConditions,true);
+  if(o.tempC)setTrip("tempC",o.tempC,true);
+  if(o.tempF)setTrip("tempF",o.tempF,true);
+  if(o.destMetarRaw||o.destTafRaw){showRaw(o.destMetarRaw||"",o.destTafRaw||"");state.lastPulled=o.destIcao||state.lastPulled;}
+  var bits=[];if(o.flightNumber)bits.push(o.flightNumber);if(o.origIata&&o.destIata)bits.push(o.origIata+"\u2192"+o.destIata);
+  var crewN=(o.captainName?1:0)+(o.foName?1:0)+(o.faNames?o.faNames.split(",").length:0);if(crewN)bits.push(crewN+" crew");if(o.wxConditions)bits.push("wx loaded");
+  pNote("\u2713 Parsed "+bits.join("  \u2022  ")+". Cyan fields are from the release \u2014 all editable. Verify crew & weather before reading.",true);
+  var det=document.getElementById("crewDetails");if(det)det.open=true;
+  ta.value="";  // never persist the raw release (contains crew PII)
 }
 
 /* ---------- crew + route hydrate ---------- */
 function hydrateSetup(){
-  ["captainName","foName","faNames"].forEach(function(k){var el=document.getElementById(k);if(state.fields[k]!==undefined)el.value=state.fields[k];
+  ["captainName","foName","faNames","flightNumber"].forEach(function(k){var el=document.getElementById(k);if(state.fields[k]!==undefined)el.value=state.fields[k];
     el.addEventListener("input",function(){state.fields[k]=el.value;save();if(state.currentPA)renderScript();});});
   var seg=document.getElementById("spkSeg");
   Array.prototype.forEach.call(seg.querySelectorAll("button"),function(b){if(b.getAttribute("data-spk")===state.fields.speaker)b.classList.add("on");
@@ -486,6 +600,8 @@ function hydrateSetup(){
   dc.addEventListener("change",function(){resolveRoute(true);});
   oc.addEventListener("input",function(){resolveRoute(false);});
   document.getElementById("pullBtn").addEventListener("click",pullWx);
+  var pBtn=document.getElementById("parseBtn");if(pBtn)pBtn.addEventListener("click",applyRelease);
+  var cBtn=document.getElementById("clearPasteBtn");if(cBtn)cBtn.addEventListener("click",function(){var ta=document.getElementById("releasePaste");if(ta)ta.value="";pNote("",false);});
   if(state.destCoords)routeNote("✓ "+state.destCoords.label+(state.pulled.wxConditions?"  •  weather set":""),true);
   updatePullBtn();
 }

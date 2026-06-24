@@ -1,5 +1,5 @@
 /* PA Deck service worker */
-var CACHE = "padeck-v4";
+var CACHE = "padeck-v10";
 var CORE = ["./", "./index.html", "./manifest.json"];
 var ICONS = ["./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./apple-touch-icon-180.png", "./favicon.png"];
 
